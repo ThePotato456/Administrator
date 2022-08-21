@@ -34,6 +34,8 @@ class colors:
 class Messages:
     NO_PERMS = 'You do not have permission to run this command!'
     USR_NOT_FOUND = 'Unable to find a user by that ID/Name!'
+    USR_ALRDY_MUTED = "This user is already muted!"
+    USR_NOT_MUTED = "This user os not muted"
 
 class Sinks(Enum):
     mp3 = discord.sinks.MP3Sink()
@@ -74,7 +76,6 @@ async def get_user_by_name(ctx: commands.Context, name: str=None):
                 if member.name == name or member.display_name == name:
                     return member
             return None
-    
 
 async def message_embed(ctx: commands.Context, title, description, color, shouldCleanup=True, cleanupTime=10):
     embed = discord.Embed(title=title, description='{0}'.format(description), color=utils.colors.blurple)
@@ -92,12 +93,24 @@ async def error_embed(ctx: commands.Context, error_message, shouldCleanup=True, 
         await message.delete()
     return message
 
-def is_admin(ctx: commands.Context, user: discord.Member):
+async def is_admin(ctx: commands.Context, user: discord.Member):
     admin_roles = admin.get_config('administrator_roles')
-    
     for role in user.roles:
         if not role.name == '@everyone':
             for role_ in admin_roles:
                 if role.id == int(role_):
                     return True
     return False
+
+async def translate_time(time_str: str=None):
+    if not time_str is None:
+        if 'm' in time_str:
+            time = int(time_str.replace('m', ''))
+            time = (time * 60)
+        elif 'h' in time_str:
+            time = int(time_str.replace('h', ''))
+            time = (time * 60) * 60
+        elif 's' in time_str:
+            time = int(time_str.replace('s', ''))
+    
+        return time

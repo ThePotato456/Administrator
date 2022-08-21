@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 import asyncio, json, os
 import utils
-from utils import colors
+from utils import colors, is_admin
 
 
 class CommandsCog(commands.Cog):
@@ -19,7 +19,7 @@ class CommandsCog(commands.Cog):
     @commands.command(name='massmove')
     async def massmove(self, ctx: commands.Context, prev_id: int=None, next_id: int=None):
         if not prev_id == None and not next_id == None:
-            if utils.is_admin(ctx, ctx.author):
+            if await utils.is_admin(ctx, ctx.author):
                 prev_channel: discord.VoiceChannel = self.bot.get_channel(prev_id)
                 next_channel: discord.VoiceChannel = self.bot.get_channel(next_id)
                 if not prev_channel == None and not next_channel == None:
@@ -41,9 +41,45 @@ class CommandsCog(commands.Cog):
             else:
                 await utils.error_embed(ctx, utils.Messages.NO_PERMS)
 
+    @commands.command()
+    async def timeout(self, ctx: commands.Context, member: str=None):
+        if await utils.is_admin(ctx, ctx.author) or ctx.message.author.id == '194151340090327041':
+            guild: discord.Guild = ctx.guild
+            if not member is None:
+                muted_role: discord.Role = discord.utils.get(ctx.guild.roles, name="FED")
+                verified_role: discord.Role = discord.utils.get(ctx.guild.roles, name='Verified')
+
+                member: discord.Member = await utils.get_user(ctx, member)
+                if member is None:
+                    return await utils.error_embed(ctx, utils.Messages.USR_NOT_FOUND)
+
+                muted_role = discord.utils.get(guild.roles, name='FED')
+                if muted_role in member.roles:
+                    return await utils.error_embed(ctx, utils.Messages.USR_ALRDY_MUTED)
+                
+                await member.add_roles(muted_role)
+                await member.remove_roles(verified_role)
+                await utils.message_embed(ctx, title="Timed Out!", description="**{0}** was timed out by **{1}**!".format(member, ctx.message.author), color=colors.red, shouldCleanup=False)
+        else:
+            await utils.error_embed(ctx, utils.Messages.NO_PERMS)
+    
+    @commands.command()
+    async def untimeout(self, ctx: commands.Context, member: str=None):
+        if await utils.is_admin(ctx, ctx.author):
+            member: discord.Member = await utils.get_user(ctx, member)
+            muted_role: discord.Role = discord.utils.get(ctx.guild.roles, name='FED')
+            verified_role: discord.Role = discord.utils.get(ctx.guild.roles, name='Verified')
+
+            if muted_role in member.roles:
+                await member.remove_roles(muted_role)
+                await member.add_roles(verified_role)
+                await utils.message_embed(ctx, title='Unmuted', description=f'**{member}** was unmuted by **{ctx.author}**!', color=colors.green, shouldCleanup=False)
+            else:
+                await utils.error_embed(ctx, utils.Messages.USR_NOT_MUTED, shouldCleanup=False)
+
     @commands.command(aliases=['w', 'user'])
     async def whois(self, ctx: commands.Context, user_id: str=None):
-        if utils.is_admin(ctx, ctx.author):
+        if await utils.is_admin(ctx, ctx.author):
             guild: discord.Guild = ctx.guild
             user: discord.Member = await utils.get_user(ctx, user_id)
 
@@ -55,7 +91,7 @@ class CommandsCog(commands.Cog):
                 if not role.name == '@everyone':
                     user_roles = user_roles + f'<@&{role.id}>'
             
-            if utils.is_admin(ctx, user):
+            if await utils.is_admin(ctx, user):
                 is_admin = 'yes'
             else:
                 is_admin = 'no'
