@@ -1,20 +1,23 @@
-from collections import UserDict
-from imaplib import Commands
-from pydoc import isdata
+
 import discord
 from discord.ext import commands
 import asyncio, json, os
 import utils
 from utils import colors, is_admin
 
-
-class CommandsCog(commands.Cog):
+    # TODO: [✗] add ability to target channel when not in the voice call
+    # TODO: [✗] add various different sound files
+                                                                                                                                                                                                                                                                                                                                            # TODO: [✗] user muted
+    # TODO: [✗] kick
+    # TODO: [✓] whois
+    # TODO: [✓] timeouwno``
+class Admin(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.Cog.listener()
     async def on_ready(self):
-        print('[commands] CommandsCog loaded and ready ')
+        print('[commands] loaded and ready ')
 
     @commands.command(name='massmove')
     async def massmove(self, ctx: commands.Context, prev_id: int=None, next_id: int=None):
@@ -29,7 +32,6 @@ class CommandsCog(commands.Cog):
                         message = await utils.message_embed(ctx, title='Administrator', description=f'**__Moving users from__**-- `{prev_channel.name} -> {next_channel.name}`', color=colors.blurple, shouldCleanup=False)
                         for id in member_ids:
                             member: discord.Member = await ctx.guild.fetch_member(id)
-                            await member.move_to(next_channel)
                     else:
                         await utils.error_embed(ctx, f'No users in `{prev_channel.name}`')
                     await ctx.message.delete()
@@ -37,13 +39,44 @@ class CommandsCog(commands.Cog):
                     if prev_channel == None:
                         await utils.error_embed(ctx, 'First channel ID is not valid!')
                     if next_channel == None:
-                        await utils.error_embed(ctx, 'Second channel ID is not valid!')
+                        await utils.error_embed(ctx, 'Second channel ID is not valid!') 
             else:
                 await utils.error_embed(ctx, utils.Messages.NO_PERMS)
 
     @commands.command()
-    async def timeout(self, ctx: commands.Context, member: str=None):
+    async def ban(self, ctx: commands.Context, user: int=None, reason: str=None):
+        if not user is None and not reason is None:
+            target_user: discord.Member(utils.get_user(ctx, user))
+            guild: discord.Guild  = ctx.author.guild
+            guild.ban(user=target_user, reason=f'{reason}', )
+
+    @commands.command()
+    async def unban(self, ctx: commands.Context, user: str=None):
+        guild: discord.Guild = ctx.guild
+        if ctx.author.roles in guild.roles:
+            return await utils.message_embed(ctx, title='', description='', color=colors.green)
+
+            
+    @commands.command()
+    async def timeout(self, ctx: commands.Context, member: str=None, time: str=None):
         if await utils.is_admin(ctx, ctx.author) or ctx.message.author.id == '194151340090327041':
+            if time is None:
+                time = 120
+                str_time = str((time / 60)) + 'm'
+            else:
+                if 'm' in time:
+                    int_time = await utils.decode_time(time)
+                    str_time = int(int_time.replace('m', ''))
+                    str_time = str((int_time * 60)) + 'm'
+                elif 'h' in time:
+                    int_time = await utils.decode_time(time)
+                    str_time = int(time.replace('h', ''))
+                    str_time = str((time * 60 * 60)) + 'h'
+                elif 's' in time:
+                    int_time = await utils.decode_time(time)
+                    str_time = int(time.replace('s', '')) 
+                    str_time = str(str_time) + 's'
+
             guild: discord.Guild = ctx.guild
             if not member is None:
                 muted_role: discord.Role = discord.utils.get(ctx.guild.roles, name="FED")
@@ -59,9 +92,20 @@ class CommandsCog(commands.Cog):
                 
                 await member.add_roles(muted_role)
                 await member.remove_roles(verified_role)
-                await utils.message_embed(ctx, title="Timed Out!", description="**{0}** was timed out by **{1}**!".format(member, ctx.message.author), color=colors.red, shouldCleanup=False)
-        else:
-            await utils.error_embed(ctx, utils.Messages.NO_PERMS)
+
+
+
+                await utils.message_embed(ctx, title="Timed Out!", description="**{0}** was timed out by **{1}** for {2}!".format(member, ctx.message.author, str_time), color=colors.red, shouldCleanup=False)
+                if time != 0:
+                    while True:
+                        time = time - 1
+                        if time == 0:
+                            break
+                        await asyncio.sleep(1) 
+                if muted_role in member.roles and not verified_role in member.roles:
+                    await self.untimeout(ctx, member.name)
+                else:
+                    await utils.error_embed(ctx, f'{member.name} is not timed out!')
     
     @commands.command()
     async def untimeout(self, ctx: commands.Context, member: str=None):
@@ -73,7 +117,7 @@ class CommandsCog(commands.Cog):
             if muted_role in member.roles:
                 await member.remove_roles(muted_role)
                 await member.add_roles(verified_role)
-                await utils.message_embed(ctx, title='Unmuted', description=f'**{member}** was unmuted by **{ctx.author}**!', color=colors.green, shouldCleanup=False)
+                await utils.message_embed(ctx, title='Untimeout', description=f'**{member}** was untimed out by **{ctx.author}**!', color=colors.green, shouldCleanup=False)
             else:
                 await utils.error_embed(ctx, utils.Messages.USR_NOT_MUTED, shouldCleanup=False)
 
@@ -103,4 +147,4 @@ class CommandsCog(commands.Cog):
 
 def setup(bot: commands.Bot):
     """Every cog needs a setup function like this."""
-    bot.add_cog(CommandsCog(bot))
+    bot.add_cog(Admin(bot))

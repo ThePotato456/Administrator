@@ -77,6 +77,20 @@ async def get_user_by_name(ctx: commands.Context, name: str=None):
                     return member
             return None
 
+async def decode_time(time: str=None):
+    if time is None:
+        time = 120
+    else:
+        if 'm' in time:
+            time = int(time.replace('m', ''))
+            time = (time * 60)
+        elif 'h' in time:
+            time = int(time.replace('h', ''))
+            time = (time * 60) * 60
+        elif 's' in time:
+            time = int(time.replace('s', ''))
+        return time
+
 async def message_embed(ctx: commands.Context, title, description, color, shouldCleanup=True, cleanupTime=10):
     embed = discord.Embed(title=title, description='{0}'.format(description), color=utils.colors.blurple)
     message = await ctx.send(embed=embed)
