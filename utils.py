@@ -1,5 +1,4 @@
 
-from curses.ascii import isdigit
 import discord, asyncio
 from discord.ext import commands
 from enum import Enum
@@ -89,9 +88,9 @@ async def decode_time(time: str=None):
             time = (time * 60) * 60
         elif 's' in time:
             time = int(time.replace('s', ''))
-        return time
+    return time
 
-async def message_embed(ctx: commands.Context, title, description, color, shouldCleanup=True, cleanupTime=10):
+async def message_embed(ctx: commands.Context, title: str, description: str, color, shouldCleanup=True, cleanupTime=10):
     embed = discord.Embed(title=title, description='{0}'.format(description), color=utils.colors.blurple)
     message = await ctx.send(embed=embed)
     if shouldCleanup:
@@ -115,6 +114,22 @@ async def is_admin(ctx: commands.Context, user: discord.Member):
                 if role.id == int(role_):
                     return True
     return False
+
+class Time(commands.Converter):
+    async def convert(self, ctx: commands.Context, time: str=None):
+        str_time = time
+        if time is None:
+            time = 120
+        else:
+            if 'm' in time:
+                time = int(time.replace('m', ''))
+                time = (time * 60)
+            elif 'h' in time:
+                time = int(time.replace('h', ''))
+                time = (time * 60) * 60
+            elif 's' in time:
+                time = int(time.replace('s', ''))
+        return { 'time': time, 'str_time': str_time }
 
 async def translate_time(time_str: str=None):
     if not time_str is None:

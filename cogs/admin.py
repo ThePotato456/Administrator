@@ -58,54 +58,31 @@ class Admin(commands.Cog):
 
             
     @commands.command()
-    async def timeout(self, ctx: commands.Context, member: str=None, time: str=None):
-        if await utils.is_admin(ctx, ctx.author) or ctx.message.author.id == '194151340090327041':
-            if time is None:
-                time = 120
-                str_time = str((time / 60)) + 'm'
+    async def timeout(self, ctx: commands.Context, member: discord.Member, time: utils.Time=None):
+        guild: discord.Guild = ctx.guild
+        if not member is None:
+            muted_role: discord.Role = discord.utils.get(ctx.guild.roles, name="FED")
+            verified_role: discord.Role = discord.utils.get(ctx.guild.roles, name='Verified')
+            if member is None:
+                return await utils.error_embed(ctx, utils.Messages.USR_NOT_FOUND)
+            muted_role = discord.utils.get(guild.roles, name='FED')
+            if muted_role in member.roles:
+                return await utils.error_embed(ctx, utils.Messages.USR_ALRDY_MUTED)
+            str_time = time['str_time']
+            time = time['time']
+            await member.add_roles(muted_role)
+            await member.remove_roles(verified_role)
+            await utils.message_embed(ctx, title="Timed Out!", description="**{0}** was timed out by **{1}** for {2}!".format(member, ctx.message.author, str_time), color=colors.red, shouldCleanup=False)
+            if time != 0:
+                while True:
+                    time = time - 1
+                    if time == 0:
+                        break
+                    await asyncio.sleep(1) 
+            if muted_role in member.roles and not verified_role in member.roles:
+                await self.untimeout(ctx, member.name)
             else:
-                if 'm' in time:
-                    int_time = await utils.decode_time(time)
-                    str_time = int(int_time.replace('m', ''))
-                    str_time = str((int_time * 60)) + 'm'
-                elif 'h' in time:
-                    int_time = await utils.decode_time(time)
-                    str_time = int(time.replace('h', ''))
-                    str_time = str((time * 60 * 60)) + 'h'
-                elif 's' in time:
-                    int_time = await utils.decode_time(time)
-                    str_time = int(time.replace('s', '')) 
-                    str_time = str(str_time) + 's'
-
-            guild: discord.Guild = ctx.guild
-            if not member is None:
-                muted_role: discord.Role = discord.utils.get(ctx.guild.roles, name="FED")
-                verified_role: discord.Role = discord.utils.get(ctx.guild.roles, name='Verified')
-
-                member: discord.Member = await utils.get_user(ctx, member)
-                if member is None:
-                    return await utils.error_embed(ctx, utils.Messages.USR_NOT_FOUND)
-
-                muted_role = discord.utils.get(guild.roles, name='FED')
-                if muted_role in member.roles:
-                    return await utils.error_embed(ctx, utils.Messages.USR_ALRDY_MUTED)
-                
-                await member.add_roles(muted_role)
-                await member.remove_roles(verified_role)
-
-
-
-                await utils.message_embed(ctx, title="Timed Out!", description="**{0}** was timed out by **{1}** for {2}!".format(member, ctx.message.author, str_time), color=colors.red, shouldCleanup=False)
-                if time != 0:
-                    while True:
-                        time = time - 1
-                        if time == 0:
-                            break
-                        await asyncio.sleep(1) 
-                if muted_role in member.roles and not verified_role in member.roles:
-                    await self.untimeout(ctx, member.name)
-                else:
-                    await utils.error_embed(ctx, f'{member.name} is not timed out!')
+                await utils.error_embed(ctx, f'{member.name} is not timed out!')
     
     @commands.command()
     async def untimeout(self, ctx: commands.Context, member: str=None):
@@ -122,25 +99,23 @@ class Admin(commands.Cog):
                 await utils.error_embed(ctx, utils.Messages.USR_NOT_MUTED, shouldCleanup=False)
 
     @commands.command(aliases=['w', 'user'])
-    async def whois(self, ctx: commands.Context, user_id: str=None):
+    async def whois(self, ctx: commands.Context, member: discord.Member=None):
         if await utils.is_admin(ctx, ctx.author):
-            guild: discord.Guild = ctx.guild
-            user: discord.Member = await utils.get_user(ctx, user_id)
-
-            if user is None:
-                return await utils.error_embed(ctx, 'Unable to find user by that ID/Name!')
+            if member is None:
+                member: discord.Member = ctx.author
+                #return await utils.error_embed(ctx, 'Unable to find user by that ID/Name!')
             
             user_roles = ''
-            for role in user.roles:
+            for role in member.roles:
                 if not role.name == '@everyone':
                     user_roles = user_roles + f'<@&{role.id}>'
             
-            if await utils.is_admin(ctx, user):
+            if await utils.is_admin(ctx, member):
                 is_admin = 'yes'
             else:
                 is_admin = 'no'
 
-            description = (f'**__Member Name:__** <@{user.id}>\n')  + (f'**__Member ID:__** {user.id}\n') + (f'**__Roles:__**{user_roles}\n') + (f'**__Is Admin:__** {is_admin}\n')
+            description = (f'**__Member Name:__** <@{member.id}>\n')  + (f'**__Member ID:__** {member.id}\n') + (f'**__Roles:__**{user_roles}\n') + (f'**__Is Admin:__** {is_admin}\n')
             await utils.message_embed(ctx, title='User Info', description=description, color=colors.blurple, shouldCleanup=False)
         else:
             await utils.error_embed(ctx, 'You do not have permission to run this command!')

@@ -7,6 +7,8 @@ import asyncio
 import json
 from multiprocessing.dummy import Manager
 import discord
+import utils
+from utils import colors
 from discord.ext import commands
 from sys import version_info as sysv
 from os import listdir, path
@@ -46,8 +48,7 @@ class CogManager(commands.Cog):
                 This command is hidden from the help menu.
                 This command deletes its messages after 20 seconds."""
 
-        message = await ctx.send("Reloading...")
-
+        await utils.message_embed(ctx, 'Cog Manager', "Reloading...", colors.blue, cleanupTime=3)
         try:
             for cog in listdir(path.join(path.dirname(path.realpath(__file__)))):
                 if cog.endswith(".py") == True:
@@ -56,13 +57,18 @@ class CogManager(commands.Cog):
                     else:
                         self.unloaded_cogs.remove(self.check_cog(cog))
                         self.bot.reload_extension(f'cogs.{cog[:-3]}')
+        except discord.ExtensionNotLoaded as nl:
+            await utils.error_embed(ctx, f'The extension {cog} was not loaded:\n```\n{nl}\n```')
+        except discord.ExtensionNotFound as nf:
+            await utils.error_embed(ctx, f'The extension {cog} was not found:\n```\n{nf}\n```')
+        except discord.NoEntryPointError as ne:
+            await utils.error_embed(ctx, f'The extension {cog} was does not have a setup function!')
+        except discord.ExtensionFailed as ef:
+            await utils.error_embed(ctx, f'The extension {cog} or its setup function has failed:\n```\n{ef}\n```')
         except Exception as exc:
-            await message.edit(content=f"An error has occurred: {exc}")
+            await utils.error_embed(ctx, f"An unknown error has occurred: {exc}")
         else:
-            await message.edit(content="All cogs have been reloaded.")
-        await asyncio.sleep(3)
-        await message.delete()
-        await ctx.message.delete()
+            await utils.message_embed(ctx, 'Cog Manager', 'All cogs have been reloaded.', colors.blue)
 
     def check_cog(self, cog):
         """Returns the name of the cog in the correct format.
@@ -89,20 +95,23 @@ class CogManager(commands.Cog):
                 This command is hidden from the help menu.
                 This command deletes its messages after 20 seconds.
         """
-        message = await ctx.send("Loading...")
-        await ctx.message.delete()
+        await utils.message_embed(ctx, 'Loading Cog', f'Loading {cog}.....', cleanupTime=3)
         try:
             if self.check_cog(cog) in self.unloaded_cogs:
                 self.unloaded_cogs.remove(self.check_cog(cog))
             self.bot.load_extension(self.check_cog(cog))
-            
-
+        except discord.ExtensionNotFound as nf:
+            await utils.error_embed(ctx, f'The extension {cog} was not found:\n```\n{nf}\n```')
+        except discord.ExtensionAlreadyLoaded as al:
+            await utils.error_embed(ctx, f'The extension {cog} is already loaded:\n```\n{al}\n```')
+        except discord.NoEntryPointError:
+            await utils.error_embed(ctx, f'The extension {cog} was does not have a setup function!')
+        except discord.ExtensionFailed as ef:
+            await utils.error_embed(ctx, f'The extension {cog} or its setup function has failed:\n```\n{al}\n```')
         except Exception as exc:
-            await message.edit(content=f"An error has occurred: {exc}")
+            await utils.error_embed(ctx, f"An error has occurred: \n```\n{exc}\n```")
         else:
-            await message.edit(content=f"{self.check_cog(cog)} has been loaded.")
-        await asyncio.sleep(3)
-        await message.delete()
+            await utils.message_embed(ctx, 'Cog Manager', f"{self.check_cog(cog)} has been loaded.", colors.blue)
 
     @commands.command(name="unload", hidden=True)
     @commands.is_owner()
@@ -116,24 +125,15 @@ class CogManager(commands.Cog):
                 This command is hidden from the help menu.
                 This command deletes its messages after 20 seconds.
         """
-        message = await ctx.send("Unloading...")
-        await ctx.message.delete()
+        await utils.message_embed(ctx, 'Cog Manager', f'Unloading {cog}', colors.blue, cleanupTime=3)
         try:
-            if self.check_cog(cog) not in self.unloaded_cogs:
-                self.unloaded_cogs.append(self.check_cog(cog))
-                self.bot.unload_extension(self.check_cog(cog))
-            else:
-                await message.edit(content='[!] Unloaded COG not found in list!')
-                await message.edit(content='[*]Unloaded COGS:\n'
-                                         + '```JSON\n'
-                                         + f'{json.dumps(self.unloaded_cogs, indent=2)}'
-                                         + '```')
-        except Exception as exc:
-            await message.edit(content=f"An error has occurred: {exc}")
+            self.bot.unload_extension(self.check_cog(cog))
+        except discord.ExtensionNotFound:
+            await utils.error_embed(ctx, f'The extension {cog} is not found!')
+        except discord.ExtensionNotLoaded:
+            await utils.error_embed(ctx, f'The extension {cog} is not loaded!')
         else:
-            await message.edit(content=f"{self.check_cog(cog)} has been unloaded.")
-        await asyncio.sleep(3)
-        await message.delete()
+            await utils.message_embed(ctx, 'Cog Manager', f"{self.check_cog(cog)} has been unloaded.", colors.blue)
 
     @commands.command(name="reload", hidden=True)
     @commands.is_owner()
@@ -146,26 +146,21 @@ class CogManager(commands.Cog):
                 This command is hidden from the help menu.
                 This command deletes its messages after 20 seconds.
         """
-        message = await ctx.send("Reloading...")
-        await ctx.message.delete()
+        await utils.message_embed(ctx, 'Cog Manager', "Reloading...", colors.blue, cleanupTime=3)
         try:
             self.bot.reload_extension(self.check_cog(cog))
         except Exception as exc:
-            await message.edit(content=f"An error has occurred: {exc}")
+            await utils.error_embed(ctx, f"An error has occurred: {exc}")
         else:
-            await message.edit(content=f"{self.check_cog(cog)} has been reloaded.")
-        await asyncio.sleep(3)
-        await message.delete()
+            await utils.message_embed(ctx, 'Cog Manager', f"{self.check_cog(cog)} has been reloaded.")
     
     @commands.command(name='listcogs', hidden=True)
     @commands.is_owner()
     async def list_cogs(self, ctx: commands.Context):
         await ctx.message.delete()
         loaded_cogs = list(self.bot.extensions.keys())
-        message = await ctx.send(f'[!] Loaded COGS: ```JSON\n{json.dumps(loaded_cogs)}\n```'
-                                +f'[!] Unloaded COGS: ```JSON\n{json.dumps(self.unloaded_cogs)}\n```')
-        await asyncio.sleep(10)
-        await message.delete()
+        await utils.message_embed(ctx, 'Loaded Cogs', (f'[!] Loaded Cogs: ```JSON\n{json.dumps(loaded_cogs)}\n```'
+                      +f'[!] Unloaded Cogs: ```JSON\n{json.dumps(self.unloaded_cogs)}\n```'), colors.blue)
 
 def setup(bot):
     """Every cog needs a setup function like this."""
