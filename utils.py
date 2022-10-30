@@ -33,6 +33,7 @@ class colors:
 class Messages:
     NO_PERMS = 'You do not have permission to run this command!'
     USR_NOT_FOUND = 'Unable to find a user by that ID/Name!'
+    USR_NOT_SPECIFIED = 'No user was specified for command!'
     USR_ALRDY_MUTED = "This user is already muted!"
     USR_NOT_MUTED = "This user os not muted"
 
@@ -90,21 +91,21 @@ async def decode_time(time: str=None):
             time = int(time.replace('s', ''))
     return time
 
-async def message_embed(ctx: commands.Context, title: str, description: str, color, shouldCleanup=True, cleanupTime=10):
-    embed = discord.Embed(title=title, description='{0}'.format(description), color=utils.colors.blurple)
+async def message_embed(ctx: commands.Context, title, description, color=colors.blurple, shouldCleanup=True, cleanupTime=10, create=False):
+    embed = discord.Embed(title=title, description='{0}'.format(description), color=color)
+    if create: return embed
     message = await ctx.send(embed=embed)
     if shouldCleanup:
         await asyncio.sleep(cleanupTime)
         await message.delete()
-    return message
 
-async def error_embed(ctx: commands.Context, error_message, shouldCleanup=True, cleanupTime=10):
-    embed = discord.Embed(title='Error', description='{0}'.format(error_message), color=utils.colors.red)
+async def error_embed(ctx: commands.Context, error_message, create=False, shouldCleanup=True, cleanupTime=10):
+    embed = discord.Embed(title='Error', description='{0}'.format(error_message), color=colors.red)
+    if create: return embed
     message = await ctx.send(embed=embed)
     if shouldCleanup:
         await asyncio.sleep(cleanupTime)
         await message.delete()
-    return message
 
 async def is_admin(ctx: commands.Context, user: discord.Member):
     admin_roles = admin.get_config('administrator_roles')

@@ -1,4 +1,5 @@
 
+from distutils.log import error
 import discord
 from discord.ext import commands
 import asyncio, json, os
@@ -58,7 +59,7 @@ class Admin(commands.Cog):
 
             
     @commands.command()
-    async def timeout(self, ctx: commands.Context, member: discord.Member, time: utils.Time=None):
+    async def timeout(self, ctx: commands.Context, member: discord.Member=None, time: utils.Time=None):
         guild: discord.Guild = ctx.guild
         if not member is None:
             muted_role: discord.Role = discord.utils.get(ctx.guild.roles, name="FED")
@@ -85,9 +86,9 @@ class Admin(commands.Cog):
                 await utils.error_embed(ctx, f'{member.name} is not timed out!')
     
     @commands.command()
-    async def untimeout(self, ctx: commands.Context, member: str=None):
+    async def untimeout(self, ctx: commands.Context, member: discord.Member=None):
         if await utils.is_admin(ctx, ctx.author):
-            member: discord.Member = await utils.get_user(ctx, member)
+            if member is None: return await utils.error_embed(ctx, error_message=utils.Messages.USR_NOT_SPECIFIED, shouldCleanup=False)
             muted_role: discord.Role = discord.utils.get(ctx.guild.roles, name='FED')
             verified_role: discord.Role = discord.utils.get(ctx.guild.roles, name='Verified')
 
@@ -119,6 +120,26 @@ class Admin(commands.Cog):
             await utils.message_embed(ctx, title='User Info', description=description, color=colors.blurple, shouldCleanup=False)
         else:
             await utils.error_embed(ctx, 'You do not have permission to run this command!')
+
+    @commands.command()
+    async def nocam(self, ctx: commands.Context, member: discord.Member=None):
+        if await utils.is_admin(ctx, ctx.author):
+            if member is None: return await utils.error_embed(ctx, error_message=utils.Messages.USR_NOT_SPECIFIED, shouldCleanup=False)
+            no_cam_role: discord.Role = discord.utils.get(ctx.guild.roles, name="Camera Disabled")
+            original_channel: discord.VoiceChannel = member.voice.channel
+            
+            afk_channel: discord.VoiceChannel = self.bot.get_channel(1001109930289414164)
+
+            if not no_cam_role in member.roles:
+                await member.add_roles(no_cam_role)
+                await utils.message_embed(ctx, title='No Camera Role', description=f'**{member}** was given the no camera role by **{ctx.author}**!', color=colors.green, shouldCleanup=False)
+            else:
+                await member.remove_roles(no_cam_role)
+                await utils.message_embed(ctx, title='No Camera Role', description=f'The `Camera Disabled` role was removed **{member}** by **{ctx.author}**', color=colors.red, shouldCleanup=False)
+            await member.move_to(afk_channel)
+            await asyncio.sleep(0.05)
+            await member.move_to(original_channel)
+
 
 def setup(bot: commands.Bot):
     """Every cog needs a setup function like this."""

@@ -5,15 +5,16 @@ import dotenv
 import json
 import utils
 
+def load_config():
+    if not os.path.exists('data/config.json'):
+        open('./data/config.json', 'x+').write('{\n    "command_prefix": "",\n    "administrator_roles": [""]\n}')
+    return json.load(open('./data/config.json', 'r'))
+config = load_config()
+
 class Administrator(commands.Bot):
     def __init__(self):
-        self.config = self.load_config()
+        self.config = load_config()
         self.bot = commands.Bot(command_prefix=self.config['command_prefix'], intents=discord.Intents.all())
-    
-    def load_config(self):
-        if not os.path.exists('data/config.json'):
-            open('./data/config.json', 'x+').write('{\n    "command_prefix": "",\n    "administrator_roles": [""]\n}')
-        return json.load(open('./data/config.json', 'r'))
 
     def get_config(self, key):
         if not self.config is None:
