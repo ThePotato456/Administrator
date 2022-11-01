@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 import asyncio, json, os
 import utils
+from bot import admin
 from utils import colors, is_admin
 
     # TODO: [✗] add ability to target channel when not in the voice call
@@ -69,11 +70,17 @@ class Admin(commands.Cog):
             muted_role = discord.utils.get(guild.roles, name='FED')
             if muted_role in member.roles:
                 return await utils.error_embed(ctx, utils.Messages.USR_ALRDY_MUTED)
-            str_time = time['str_time']
-            time = time['time']
+            if time == None:
+                str_time = 'forever'
+                time = '0'
+            else:
+                str_time = time['str_time']
+                time = time['time']
             await member.add_roles(muted_role)
             await member.remove_roles(verified_role)
             await utils.message_embed(ctx, title="Timed Out!", description="**{0}** was timed out by **{1}** for {2}!".format(member, ctx.message.author, str_time), color=colors.red, shouldCleanup=False)
+            await asyncio.sleep(1)
+            await member.move_to(None)
             if time != 0:
                 while True:
                     time = time - 1
@@ -126,9 +133,8 @@ class Admin(commands.Cog):
         if await utils.is_admin(ctx, ctx.author):
             if member is None: return await utils.error_embed(ctx, error_message=utils.Messages.USR_NOT_SPECIFIED, shouldCleanup=False)
             no_cam_role: discord.Role = discord.utils.get(ctx.guild.roles, name="Camera Disabled")
-            original_channel: discord.VoiceChannel = member.voice.channel
-            
-            afk_channel: discord.VoiceChannel = self.bot.get_channel(1001109930289414164)
+            original_channel: discord.VoiceChannel = self.bot.get_channel(member.voice.channel.id)
+            afk_channel: discord.VoiceChannel = self.bot.get_channel(admin.get_config('afk_channel_id'))
 
             if not no_cam_role in member.roles:
                 await member.add_roles(no_cam_role)
@@ -137,7 +143,7 @@ class Admin(commands.Cog):
                 await member.remove_roles(no_cam_role)
                 await utils.message_embed(ctx, title='No Camera Role', description=f'The `Camera Disabled` role was removed **{member}** by **{ctx.author}**', color=colors.red, shouldCleanup=False)
             await member.move_to(afk_channel)
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(1)
             await member.move_to(original_channel)
 
 
